@@ -76,21 +76,19 @@ def get_chp_encimageurls_mp(chp):
     END_CODE = b'\x0a\x32\x22\x30'
     response = requests.get(URL.format(chp["id"]))
     IMG_URL_PRE = response.content[6:15] # b'\n\xa6\x02\n\xa3\x02\n\x97\x01' 
-    print(IMG_URL_PRE)
-    content = response.content
     
-    url_ind = content.find(IMG_URL_PRE) + len(IMG_URL_PRE) 
+    url_ind = response.content.find(IMG_URL_PRE) + len(IMG_URL_PRE) 
     
     encimageurls = []
 
     while True:
-        key_ind = content.find(KEY_PRE)
+        key_ind = response.content.find(KEY_PRE)
 
-        url = content[url_ind:key_ind]
-        content = content[key_ind + len(KEY_PRE):]
+        url = response.content[url_ind:key_ind]
+        #content = response.content[key_ind + len(KEY_PRE):]
 
-        url_ind = content.find(IMG_URL_PRE)
-        key = content[:url_ind]
+        url_ind = response.content.find(IMG_URL_PRE,key_ind + len(KEY_PRE))
+        key = response.content[key_ind + len(KEY_PRE):url_ind]
         url_ind += len(IMG_URL_PRE)
 
         ending = key.find(END_CODE)
