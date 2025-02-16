@@ -8,6 +8,7 @@ def get_mplus_id(d):
     s = d["attributes"]["externalUrl"]
     return s.split("/")[-1]
 
+
 def get_chps(manga_id,lang):
     LIMIT = 96
     URL = "https://api.mangadex.org/manga/{manga_id}/feed?limit=96&includes[]=scanlation_group&includes[]=user&order[volume]=asc&order[chapter]=asc&offset={offset}&contentRating[]=safe&contentRating[]=suggestive&contentRating[]=erotica&contentRating[]=pornographic"
@@ -43,6 +44,7 @@ def get_chp_imageurls_md(id):
     
     return urls
 
+
 def imageurls_to_pdf(urls,path):
     images = []
 
@@ -54,7 +56,6 @@ def imageurls_to_pdf(urls,path):
         images.append(img)
     
     images[0].save(path, save_all=True, append_images=images[1:])
-
 
 
 def download_chp(chp,path,prefix,overwrite):
@@ -70,55 +71,54 @@ def download_chp(chp,path,prefix,overwrite):
     else:
         download_chp_md(chp,path)
 
+
 def get_chp_encimageurls_mp(chp):
     URL = "https://jumpg-webapi.tokyo-cdn.com/api/manga_viewer?chapter_id={}&split=no&img_quality=super_high"
     KEY_PRE = b'\x10\x90\x06\x18\xF9\x08\x2A\x80\x01'
     END_CODE = b'\x0a\x32\x22\x30'
     response = requests.get(URL.format(chp["id"]))
-    IMG_URL_PRE = response.content[6:15] # b'\n\xa6\x02\n\xa3\x02\n\x97\x01' 
+    IMG_URL_PRE = response.content[6:15] # example: '\n\xa6\x02\n\xa3\x02\n\x97\x01' 
     
+    with open("mvresponse","wb") as file:
+        file.write(response.content)
+
     url_ind = response.content.find(IMG_URL_PRE) + len(IMG_URL_PRE) 
     
     encimageurls = []
+    
+    def get_ind(text,start = None):
+        return response.content.find(text,start)
 
-    while True:
-        key_ind = response.content.find(KEY_PRE)
-
-        url = response.content[url_ind:key_ind]
-        #content = response.content[key_ind + len(KEY_PRE):]
-
-        url_ind = response.content.find(IMG_URL_PRE,key_ind + len(KEY_PRE))
-        key = response.content[key_ind + len(KEY_PRE):url_ind]
-        url_ind += len(IMG_URL_PRE)
-
-        ending = key.find(END_CODE)
+    ind_end = get_ind(IMG_URL_PRE)
+    running = True
+    while running:
+        ind_start = ind_end + len(IMG_URL_PRE)
+        ind_end = get_ind(KEY_PRE,ind_start)
         
-        if ending != -1: 
-            encimageurls.append((url,key[:ending]))
-            break
-        else:
-            encimageurls.append((url,key))
+        url = response.content[ind_start:ind_end]
+        
+        ind_start = ind_end + len(KEY_PRE)
+        ind_end = get_ind(IMG_URL_PRE,ind_start)
+        if ind_end == -1: 
+            ind_end = get_ind(END_CODE,ind_start)
+            running = False
+        
+        key = response.content[ind_start:ind_end]
+        
+        encimageurls.append((url,key))
     
     return encimageurls
 
 
-
-
-        
-        
-
-
 def download_chp_mp(chp,path):
     URLS_ENC = get_chp_encimageurls_mp(chp)
-    # TODO: shit
+    #TODO: implement
 
-    
 
 def download_chp_md(chp,path):
     image_urls = get_chp_imageurls_md(chp["id"])
     imageurls_to_pdf(image_urls,path)
     
-
 
 if __name__ == '__main__':
     import argparse
