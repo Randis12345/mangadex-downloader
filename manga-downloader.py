@@ -72,22 +72,22 @@ def download_chp(chp,path,prefix,overwrite,max_workers):
         download_chp_mp(chp,path,max_workers)
     else:
         download_chp_md(chp,path,max_workers)
+    
+    print(path)
 
 
 def get_chp_encimageurls_mp(chp):
     URL = "https://jumpg-webapi.tokyo-cdn.com/api/manga_viewer?chapter_id={}&split=no&img_quality=high"
     KEY_PRE = b'\x10\x90\x06\x18\xF9\x08\x2A\x80\x01'
     END_CODE = b'\x0a\x32\x22\x30'
+
     response = requests.get(URL.format(chp["id"]))
+    FIRST_H = response.content.find(b"h")
+    IMG_URL_PRE = response.content[FIRST_H - 9:FIRST_H]
+
 
     def get_ind(text,start = None):
         return response.content.find(text,start)
-
-    IMG_URL_PRE = response.content[6:15] # example: '\n\xa6\x02\n\xa3\x02\n\x97\x01' 
-    
-    url_ind = response.content.find(IMG_URL_PRE) + len(IMG_URL_PRE) 
-    
-    encimageurls = []
     
     def hex2bin(enc_key):
         out = bytearray()
@@ -100,6 +100,7 @@ def get_chp_encimageurls_mp(chp):
         
         return out
 
+    encimageurls = []
     ind_end = get_ind(IMG_URL_PRE)
     running = True
     while running:
@@ -156,7 +157,7 @@ if __name__ == '__main__':
     parser.add_argument("--id", type=str, help="mangadex manga id")
     parser.add_argument("--chapter", type=str, help="chapter(s) to download: START,END | CHPNUM | all")
     parser.add_argument("--path",default="" ,type=str, help="path to dir to download files, default: working directory")
-    parser.add_argument("--rr",default=50 ,type=int, help="max amount of requests at one time")
+    parser.add_argument("--rr",default=50 ,type=int, help="max amount of requests at one time (default 50)")
     parser.add_argument("--language",default="en" ,type=str, help="language (e.g \"en\" which is default)")
     parser.add_argument("--prefix",default="chapter" ,type=str, help="prefix in pdf names, default is \"chapter\"")
     parser.add_argument('--overwrite', action='store_true',help="overwrite chapters")
@@ -177,7 +178,7 @@ if __name__ == '__main__':
         ind = args.chapter.index(",")
         start = float(args.chapter[:ind])
         end = float(args.chapter[ind+1:])
-
+        
         for x in chps: 
             chpnum = float(x["chp_num"])
             if chpnum < start or chpnum > end: continue
